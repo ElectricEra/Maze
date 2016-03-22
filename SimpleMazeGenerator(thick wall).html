@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+</head>
+
+<body>
+
+<canvas id="gameCanvas" width="800" height="600" style="background:black"></canvas>
+<script src="seedrandom.min.js"></script>
+<script src="jquery-2.1.4.min.js"></script>
+<script>
+var canvas = document.getElementById("gameCanvas");
+var canvasContext = canvas.getContext('2d');
+
+var GameGrid = [];
+
+//Tweak variables from here
+//Canvas size - 800:600
+var BlockSize = 40;
+
+var sizeColMin = 7;
+var sizeColMax = 7;
+var sizeRowMin = 20;
+var sizeRowMax = 20;
+//Up to here
+
+var FIELD_C = (canvas.width-200)/BlockSize;
+var FIELD_R = (canvas.height-200)/BlockSize;
+
+for (var c=0; c<FIELD_C; c++) {
+	GameGrid[c] = [];
+	for (var r=0; r<FIELD_R; r++) {
+		GameGrid[c][r]={x:0,y:0,drawn:false,drawable:false,lines:4};
+		GameGrid[c][r].x = c*BlockSize + 100;
+		GameGrid[c][r].y = r*BlockSize + 100;
+	}
+}
+//Start
+var a;
+var b;
+var addable = [];
+
+buildAllWalls();
+pickRandom();
+
+//Automaic step
+while (addable.length != 0 ) {
+	addNext();
+}
+//drawRect(1,1,"white");
+console.log(GameGrid[5][5].lines);
+canvasContext.fillStyle = "white";
+canvasContext.fillRect(GameGrid[5][5].x-5,GameGrid[5][5].y-5,10,10);
+
+//Manual step
+//addEventListener("click",addNext);
+
+function pickRandom() {
+	a = Math.floor(Math.random()*(FIELD_C));
+	b = Math.floor(Math.random()*(FIELD_R));
+	drawRect(a,b,"black");
+	GameGrid[a][b].drawn = true;
+	GameGrid[a][b].drawable = false;
+	addable.push([a,b]);
+	updateDrawable(a,b);
+}
+
+function addNext() {
+	var rnd = Math.floor(Math.random()*addable.length);
+	var x = addable[rnd][0];
+	var y = addable[rnd][1];
+	GameGrid[x][y].drawn = true;
+	findSolid(x,y);
+	updateDrawable(x,y);
+	drawRect(x,y,"black");
+}
+
+
+function addIf(x,y) {
+	for (var i=0; i<addable.length; i++) {
+		if (addable[i][0] == x && addable[i][1] == y) {
+			return;
+		}
+	}
+	addable.push([x,y]);
+}
+
+function findAndDelete(x,y) {
+	for (var i=0; i<addable.length; i++) {
+		if (addable[i][0] == x && addable[i][1] == y) {
+			addable.splice(i,1);
+			break;
+		}
+	}
+}
+
+function isInField(x,y,offX,offY) {
+	if ( (x+offX>=0) && (x+offX<FIELD_C) && (y+offY>=0) && (y+offY<FIELD_R) ) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function updateDrawable(x,y) {
+	findAndDelete(x,y);
+
+	if (isInField(x,y,1,0)) {
+		if (GameGrid[x+1][y].drawn == false) {
+			GameGrid[x+1][y].drawable = true;
+			drawRect(x+1,y,"yellow");
+			addIf(x+1,y);
+		}
+	}
+
+	if (isInField(x,y,-1,0)) {
+		if (GameGrid[x-1][y].drawn == false) {
+			GameGrid[x-1][y].drawable = true;
+			drawRect(x-1,y,"yellow");
+			addIf(x-1,y);
+		}
+	}
+
+	if (isInField(x,y,0,1)) {
+		if (GameGrid[x][y+1].drawn == false) {
+			GameGrid[x][y+1].drawable = true;
+			drawRect(x,y+1,"yellow");
+			addIf(x,y+1);		}
+	}
+
+	if (isInField(x,y,0,-1)) {
+		if (GameGrid[x][y-1].drawn == false) {
+			GameGrid[x][y-1].drawable = true;
+			drawRect(x,y-1,"yellow");
+			addIf(x,y-1);
+		}
+	}
+}
+
+
+function findSolid(x,y) {
+	var arr = [1, 2, 3, 4];
+	shuffle(arr);
+	var exi = false;
+	for (var i=0; i<4; i++) {
+		if (exi) {
+			break;
+		}
+		switch(arr[i]) {
+			case 1:
+				if (isInField(x,y,1,0)) {
+					if (GameGrid[x+1][y].drawn == true) {
+						drawLine(GameGrid[x][y].x+BlockSize,GameGrid[x][y].y,GameGrid[x][y].x+BlockSize,GameGrid[x][y].y+BlockSize,"black");
+						exi = true;
+						//GameGrid[x][y].lines--;
+						GameGrid[x+1][y].lines--;
+						if (isInField(x,y,1,1)) {
+							GameGrid[x+1][y+1].lines--;
+						}
+					}
+				}
+			break;
+			case 2:
+				if (isInField(x,y,-1,0)) {
+					if (GameGrid[x-1][y].drawn == true) {
+						drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x][y].x,GameGrid[x][y].y+BlockSize,"black");
+						exi = true;
+						GameGrid[x][y].lines--;
+						if (isInField(x,y,0,1)) {
+							GameGrid[x][y+1].lines--;
+						}
+					}
+				}
+			break;
+			case 3:
+				if (isInField(x,y,0,1)) {
+					if (GameGrid[x][y+1].drawn == true) {
+						drawLine(GameGrid[x][y+1].x,GameGrid[x][y+1].y,GameGrid[x][y+1].x+BlockSize,GameGrid[x][y+1].y,"black");
+						exi = true;
+						GameGrid[x][y+1].lines--;
+						if (isInField(x,y,1,1)) {
+							GameGrid[x+1][y+1].lines--;
+						}
+					}
+				}
+			break;
+			case 4:
+				if (isInField(x,y,0,-1)) {
+					if (GameGrid[x][y-1].drawn == true) {
+						drawLine(GameGrid[x][y-1].x,GameGrid[x][y-1].y+BlockSize,GameGrid[x][y-1].x+BlockSize,GameGrid[x][y-1].y+BlockSize,"black");
+						exi = true;
+						GameGrid[x][y].lines--;
+						if (isInField(x,y,1,0)) {
+							GameGrid[x+1][y].lines--;
+						}
+					}
+				}
+			break;
+		}
+	}
+}
+
+function shuffle(array) {
+	var currentIndex = array.length, temporaryValue, randomIndex;
+	while (0 !== currentIndex) {
+
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+  return array;
+}
+
+
+function drawRect(x,y,color) {
+	canvasContext.fillStyle = color;
+	canvasContext.fillRect(GameGrid[x][y].x+10,GameGrid[x][y].y+10,BlockSize-20,BlockSize-20);
+}
+
+function drawLine(x1,y1,x2,y2,color) {
+	canvasContext.beginPath();
+	canvasContext.strokeStyle = color;
+	canvasContext.moveTo(x1,y1);
+	canvasContext.lineTo(x2,y2);
+	canvasContext.stroke();
+	
+	canvasContext.beginPath();
+	canvasContext.strokeStyle = color;
+	canvasContext.moveTo(x1,y1);
+	canvasContext.lineTo(x2,y2);
+	canvasContext.stroke();
+	
+	canvasContext.beginPath();
+	canvasContext.strokeStyle = color;
+	canvasContext.moveTo(x1,y1);
+	canvasContext.lineTo(x2,y2);
+	canvasContext.stroke();
+	
+	canvasContext.beginPath();
+	canvasContext.strokeStyle = color;
+	canvasContext.moveTo(x1,y1);
+	canvasContext.lineTo(x2,y2);
+	canvasContext.stroke();
+	
+	canvasContext.beginPath();
+	canvasContext.strokeStyle = color;
+	canvasContext.moveTo(x1,y1);
+	canvasContext.lineTo(x2,y2);
+	canvasContext.stroke();
+}
+
+function drawX(x,y,color) {
+	drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x][y].x+BlockSize,GameGrid[x][y].y+BlockSize,color);
+	drawLine(GameGrid[x][y].x+BlockSize,GameGrid[x][y].y,GameGrid[x][y].x,GameGrid[x][y].y+BlockSize,color);
+}
+
+function buildAllWalls() {
+	for (var i=0; i<FIELD_C; i++) {
+		for (var j=0; j<FIELD_R; j++) {
+			drawLine(GameGrid[i][j].x,GameGrid[i][j].y,GameGrid[i][j].x+BlockSize,GameGrid[i][j].y,"white");
+			drawLine(GameGrid[i][j].x,GameGrid[i][j].y,GameGrid[i][j].x,GameGrid[i][j].y+BlockSize,"white");
+		}
+	}
+	for (var i=0; i<FIELD_C; i++) {
+		drawLine(GameGrid[i][FIELD_R-1].x,GameGrid[i][FIELD_R-1].y+BlockSize,GameGrid[i][FIELD_R-1].x+BlockSize,GameGrid[i][FIELD_R-1].y+BlockSize,"white");
+	}
+	for (var j=0; j<FIELD_R; j++) {
+		drawLine(GameGrid[FIELD_C-1][j].x+BlockSize,GameGrid[FIELD_C-1][j].y,GameGrid[FIELD_C-1][j].x+BlockSize,GameGrid[FIELD_C-1][j].y+BlockSize,"white");
+	}
+}
+</script>
+
+</body>
+</html>
