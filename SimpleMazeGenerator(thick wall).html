@@ -20,47 +20,118 @@ var GameGrid = [];
 //Canvas size - 800:600
 var BlockSize = 40;
 
-var sizeColMin = 7;
-var sizeColMax = 7;
-var sizeRowMin = 20;
-var sizeRowMax = 20;
+var minRoohWidth = 6;
+var maxRoohWidth = 12;
+var minRoohHeight = 6;
+var maxRoohHeight = 12;
 //Up to here
 
-var FIELD_C = (canvas.width-200)/BlockSize;
-var FIELD_R = (canvas.height-200)/BlockSize;
+var FIELD_C = Math.floor(Math.random()*(maxRoohWidth-minRoohWidth))+minRoohWidth;
+var FIELD_R = Math.floor(Math.random()*(maxRoohHeight-minRoohHeight))+minRoohHeight;
 
 for (var c=0; c<FIELD_C; c++) {
 	GameGrid[c] = [];
 	for (var r=0; r<FIELD_R; r++) {
 		GameGrid[c][r]={x:0,y:0,drawn:false,drawable:false,lines:4};
-		GameGrid[c][r].x = c*BlockSize + 100;
-		GameGrid[c][r].y = r*BlockSize + 100;
+		GameGrid[c][r].x = c*BlockSize + 20;
+		GameGrid[c][r].y = r*BlockSize + 20;
 	}
 }
+
 //Start
 var a;
 var b;
 var addable = [];
+var conn3 = [];
 
 buildAllWalls();
 pickRandom();
 
-//Automaic step
 while (addable.length != 0 ) {
 	addNext();
 }
-//drawRect(1,1,"white");
-console.log(GameGrid[5][5].lines);
-canvasContext.fillStyle = "white";
-canvasContext.fillRect(GameGrid[5][5].x-5,GameGrid[5][5].y-5,10,10);
 
-//Manual step
-//addEventListener("click",addNext);
+findBigConnections();
+smoothBigConnections();
+
+function findBigConnections() {
+	for (var c=1; c<FIELD_C; c++) {
+		for (var r=1; r<FIELD_R; r++) {
+			if (GameGrid[c][r].lines>=3) {
+				conn3.push([c,r]);
+			} 
+		}
+	}
+}
+function smoothBigConnections() {
+	for (var j=0; j<conn3.length; j++) {
+
+		var x = conn3[j][0];
+		var y = conn3[j][1];
+
+		var arr = [1, 2, 3, 4];
+		shuffle(arr);
+		var exi = false;
+		var extiAt=0;
+		for (var i=0; i<4; i++) {
+
+			if (exi) {
+				break;
+			}
+			switch(arr[i]) {
+				case 1:
+					if (isInField(x,y,1,0)) {
+						if (GameGrid[x+1][y].lines >= 2) {
+							drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x+1][y].x,GameGrid[x+1][y].y,"black");
+							exi = true;
+							extiAt = 1;
+							GameGrid[x][y].lines--;
+							GameGrid[x+1][y].lines--;
+						}
+					}
+				break;
+				case 2:
+					if (isInField(x,y,-1,0)) {
+						if (GameGrid[x-1][y].lines >= 2) {
+							drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x-1][y].x,GameGrid[x-1][y].y,"black");
+							exi = true;
+							extiAt = 2;
+							GameGrid[x][y].lines--;
+							GameGrid[x-1][y].lines--;
+						}
+					}
+				break;
+				case 3:
+					if (isInField(x,y,0,1)) {
+						if (GameGrid[x][y+1].lines >= 2) {
+							drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x][y+1].x,GameGrid[x][y+1].y,"black");
+							exi = true;
+							extiAt = 3;
+							GameGrid[x][y].lines--;
+							GameGrid[x][y+1].lines--;
+						}
+					}
+				break;
+				case 4:
+					if (isInField(x,y,0,-1)) {
+						if (GameGrid[x][y-1].lines >= 2) {
+							drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x][y-1].x,GameGrid[x][y-1].y,"black");
+							exi = true;
+							extiAt = 4;
+							GameGrid[x][y].lines--;
+							GameGrid[x][y-1].lines--;
+						}
+					}
+				break;
+				default: exi = true; exitAt = "default";
+			}
+		}
+	}
+}
 
 function pickRandom() {
 	a = Math.floor(Math.random()*(FIELD_C));
 	b = Math.floor(Math.random()*(FIELD_R));
-	drawRect(a,b,"black");
 	GameGrid[a][b].drawn = true;
 	GameGrid[a][b].drawable = false;
 	addable.push([a,b]);
@@ -74,7 +145,6 @@ function addNext() {
 	GameGrid[x][y].drawn = true;
 	findSolid(x,y);
 	updateDrawable(x,y);
-	drawRect(x,y,"black");
 }
 
 
@@ -106,39 +176,30 @@ function isInField(x,y,offX,offY) {
 
 function updateDrawable(x,y) {
 	findAndDelete(x,y);
-
 	if (isInField(x,y,1,0)) {
 		if (GameGrid[x+1][y].drawn == false) {
 			GameGrid[x+1][y].drawable = true;
-			drawRect(x+1,y,"yellow");
 			addIf(x+1,y);
 		}
 	}
-
 	if (isInField(x,y,-1,0)) {
 		if (GameGrid[x-1][y].drawn == false) {
 			GameGrid[x-1][y].drawable = true;
-			drawRect(x-1,y,"yellow");
 			addIf(x-1,y);
 		}
 	}
-
 	if (isInField(x,y,0,1)) {
 		if (GameGrid[x][y+1].drawn == false) {
 			GameGrid[x][y+1].drawable = true;
-			drawRect(x,y+1,"yellow");
 			addIf(x,y+1);		}
 	}
-
 	if (isInField(x,y,0,-1)) {
 		if (GameGrid[x][y-1].drawn == false) {
 			GameGrid[x][y-1].drawable = true;
-			drawRect(x,y-1,"yellow");
 			addIf(x,y-1);
 		}
 	}
 }
-
 
 function findSolid(x,y) {
 	var arr = [1, 2, 3, 4];
@@ -154,7 +215,6 @@ function findSolid(x,y) {
 					if (GameGrid[x+1][y].drawn == true) {
 						drawLine(GameGrid[x][y].x+BlockSize,GameGrid[x][y].y,GameGrid[x][y].x+BlockSize,GameGrid[x][y].y+BlockSize,"black");
 						exi = true;
-						//GameGrid[x][y].lines--;
 						GameGrid[x+1][y].lines--;
 						if (isInField(x,y,1,1)) {
 							GameGrid[x+1][y+1].lines--;
@@ -216,49 +276,16 @@ function shuffle(array) {
   return array;
 }
 
-
-function drawRect(x,y,color) {
-	canvasContext.fillStyle = color;
-	canvasContext.fillRect(GameGrid[x][y].x+10,GameGrid[x][y].y+10,BlockSize-20,BlockSize-20);
-}
-
 function drawLine(x1,y1,x2,y2,color) {
-	canvasContext.beginPath();
-	canvasContext.strokeStyle = color;
-	canvasContext.moveTo(x1,y1);
-	canvasContext.lineTo(x2,y2);
-	canvasContext.stroke();
-	
-	canvasContext.beginPath();
-	canvasContext.strokeStyle = color;
-	canvasContext.moveTo(x1,y1);
-	canvasContext.lineTo(x2,y2);
-	canvasContext.stroke();
-	
-	canvasContext.beginPath();
-	canvasContext.strokeStyle = color;
-	canvasContext.moveTo(x1,y1);
-	canvasContext.lineTo(x2,y2);
-	canvasContext.stroke();
-	
-	canvasContext.beginPath();
-	canvasContext.strokeStyle = color;
-	canvasContext.moveTo(x1,y1);
-	canvasContext.lineTo(x2,y2);
-	canvasContext.stroke();
-	
-	canvasContext.beginPath();
-	canvasContext.strokeStyle = color;
-	canvasContext.moveTo(x1,y1);
-	canvasContext.lineTo(x2,y2);
-	canvasContext.stroke();
+	for (var i=0; i<5; i++) {
+		canvasContext.beginPath();
+		canvasContext.strokeStyle = color;
+		canvasContext.moveTo(x1,y1);
+		canvasContext.lineTo(x2,y2);
+		canvasContext.stroke();
+	}
 }
-
-function drawX(x,y,color) {
-	drawLine(GameGrid[x][y].x,GameGrid[x][y].y,GameGrid[x][y].x+BlockSize,GameGrid[x][y].y+BlockSize,color);
-	drawLine(GameGrid[x][y].x+BlockSize,GameGrid[x][y].y,GameGrid[x][y].x,GameGrid[x][y].y+BlockSize,color);
-}
-
+//drawRect
 function buildAllWalls() {
 	for (var i=0; i<FIELD_C; i++) {
 		for (var j=0; j<FIELD_R; j++) {
